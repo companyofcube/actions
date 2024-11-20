@@ -1,0 +1,21 @@
+name: "Setup Yarn"
+description: "Setup Node.js and install dependencies using Yarn"
+inputs:
+  node-version:
+    description: "The version of Node.js to use"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: ⚙ Enable Corepack
+      run: corepack enable
+
+    - name: ⚙ Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: yarn
+
+    - name: 📦 Install dependencies
+      shell: bash
+      run: yarn install --immutable
