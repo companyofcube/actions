@@ -1,6 +1,10 @@
 name: "Send Discord notification"
 description: "Send Discord notification"
 inputs:
+  job-status:
+    description: "Status of the job"
+    required: false
+    default: "success"
   webhook-url:
     description: "URL the Discord webhook"
     required: true
@@ -13,8 +17,8 @@ runs:
         webhook-url: ${{ inputs.webhook-url }}
         embed-author-name: ${{ github.event.pusher.username || github.event.release.author.username || github.event.pull_request.user.username }}
         embed-author-icon-url: ${{ github.event.pusher.avatar_url || github.event.release.author.avatar_url || github.event.pull_request.user.avatar_url }}
-        embed-color: ${{ job.status == 'success' && 5763719 || 15548997 }}
+        embed-color: ${{ inputs.job-status == 'success' && 5763719 || 15548997 }}
         embed-title: ${{ github.event_name == 'pull_request' && format('Updated `PR-{0}`', github.ref_name) || format('Pushed to `{0}`', github.ref_name) }}
         embed-url: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_number }}
         embed-description: ${{ github.event.head_commit.message }}
-        embed-footer-text: "${{ github.repository }} • Build #${{ github.run_number }} ${{ job.status == 'success' && 'Succeed' || 'Failed' }}"
+        embed-footer-text: "${{ github.repository }} • Build #${{ github.run_number }} ${{ inputs.job-status == 'success' && 'Succeed' || 'Failed' }}"
