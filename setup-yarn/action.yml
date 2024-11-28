@@ -4,6 +4,9 @@ inputs:
   node-version:
     description: "The version of Node.js to use"
     required: true
+  registry-token:
+    description: "The token to authenticate with the CompanyOfCube registry"
+    required: false
 runs:
   using: "composite"
   steps:
@@ -15,6 +18,11 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: yarn
+
+    - name: 🔑 Authenticate with registry
+      if: ${{ inputs.registry-token != '' }}
+      shell: bash
+      run: yarn config set npmScopes.companyofcube.npmAuthToken ${{ inputs.registry-token }}
 
     - name: 📦 Install dependencies
       shell: bash
