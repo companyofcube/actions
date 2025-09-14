@@ -1,0 +1,46 @@
+name: "Commit and Push"
+description: "Commit and push changes to the repository"
+inputs:
+  branch:
+    description: "Branch to commit and push to"
+    required: false
+    default: "master"
+  message:
+    description: "Message for the commit"
+    required: true
+  repository:
+    description: "Git repository URL"
+    required: true
+  ssh-host:
+    description: "SSH host for the Git repository"
+    required: true
+  ssh-key:
+    description: "SSH private key for pushing to the Git repository"
+    required: true
+  ssh-port:
+    description: "SSH port for the Git repository"
+    required: false
+    default: "22"
+  ssh-user:
+    description: "SSH user for the Git repository"
+    required: false
+    default: "git"
+runs:
+  using: "composite"
+  steps:
+    - name: 🖌 Git Commit
+      shell: bash
+      run: |
+        git config user.name gitea-actions
+        git config user.email teabot@gitea.io
+        git commit -m "${{ inputs.message }} [skip ci]"
+
+    - name: 🚀 Git Push
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ inputs.ssh-key }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -p ${{ inputs.ssh-port }} ${{ inputs.ssh-host }} >> ~/.ssh/known_hosts 2>/dev/null
+        git remote set-url origin ssh://${{ inputs.ssh-user }}@${{ inputs.ssh-host }}:${{ inputs.ssh-port }}/${{ inputs.repository }}.git
+        git push origin HEAD:refs/heads/${{ inputs.branch }}
