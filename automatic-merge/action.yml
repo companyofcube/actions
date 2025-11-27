@@ -1,0 +1,71 @@
+name: "Automatic merge"
+description: "Automatically merge changes from the source branch to the target branch"
+inputs:
+  source-branch:
+    description: "Source branch to merge from"
+    required: false
+    default: "master"
+  target-branch:
+    description: "Target branch to merge into"
+    required: false
+    default: "develop"
+  repository:
+    description: "Git repository URL"
+    required: true
+  ssh-host:
+    description: "SSH host for the Git repository"
+    required: true
+  ssh-key:
+    description: "SSH private key for pushing to the Git repository"
+    required: true
+  ssh-port:
+    description: "SSH port for the Git repository"
+    required: false
+    default: "22"
+  ssh-user:
+    description: "SSH user for the Git repository"
+    required: false
+    default: "git"
+  discord-webhook-url:
+    description: "Discord webhook URL for notifications"
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: Configure Git
+      run: |
+        git config user.name gitea-actions
+        git config user.email teabot@gitea.io
+
+    - name: Attempt to merge ${{ inputs.source-branch }} into ${{ inputs.target-branch }}
+      id: merge
+      run: |
+        git fetch origin ${{ inputs.target-branch }}
+        git checkout ${{ inputs.target-branch }}
+        git merge origin/${{ inputs.source-branch }} --ff -m "Auto-merge ${{ inputs.source-branch }} into ${{ inputs.target-branch }}" || echo "CONFLICT=true" >> $GITHUB_OUTPUT
+
+    - name: Push if no conflicts
+      if: steps.merge.outputs.CONFLICT != 'true'
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ inputs.ssh-key }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -p ${{ inputs.ssh-port }} ${{ inputs.ssh-host }} >> ~/.ssh/known_hosts 2>/dev/null
+        git remote set-url origin ssh://${{ inputs.ssh-user }}@${{ inputs.ssh-host }}:${{ inputs.ssh-port }}/${{ inputs.repository }}.git
+        git push origin HEAD:refs/heads/${{ inputs.target-branch }}
+
+    - name: Notify about conflicts
+      if: steps.merge.outputs.CONFLICT == 'true'
+      run: |
+        git merge --abort
+        echo "::warning::⚠️ Merge conflict detected! Cannot automatically merge ${{ inputs.source-branch }} into ${{ inputs.target-branch }}. Please resolve conflicts manually."
+        exit 1
+
+    - name: 📩🔥 Send Discord notification about conflicts
+      if: failure() && inputs.discord-webhook-url != ''
+      uses: companyofcube/actions/discord-notify@main
+      with:
+        job-status: ${{ job.status }}
+        job-title: "Automatic ${{ inputs.source-branch }} → ${{ inputs.target-branch }} failed due to merge conflicts"
+        webhook-url: ${{ inputs.discord-webhook-url }}
