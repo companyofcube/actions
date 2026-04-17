@@ -1,0 +1,38 @@
+name: "Plan infrastructure Changes"
+description: "Plan infrastructure changes before applying them"
+inputs:
+  tofu-version:
+    description: "The version of OpenTofu to use"
+    required: false
+    default: "1.11.5"
+  working-directory:
+    description: "The directory containing your infrastructure configuration files"
+    required: false
+    default: ".infra"
+runs:
+  using: "composite"
+  steps:
+    - name: Setup OpenTofu
+      uses: opentofu/setup-opentofu@v2
+      with:
+        tofu_version: ${{ inputs.tofu-version }}
+
+    - name: Check format
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: tofu fmt -check
+
+    - name: Init OpenTofu
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: tofu init
+
+    - name: Validate infrastructure
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: tofu validate
+
+    - name: Plan infrastructure changes
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: tofu plan -input=false
