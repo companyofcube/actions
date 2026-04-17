@@ -1,0 +1,54 @@
+name: "Apply infrastructure Changes"
+description: "Apply infrastructure changes on a remote server through SSH"
+inputs:
+  ssh-host:
+    description: "SSH host of the remote server"
+    required: true
+  ssh-key:
+    description: "SSH private key to connect to the remote server"
+    required: true
+  ssh-port:
+    description: "SSH port of the remote server"
+    required: false
+    default: "22"
+  ssh-user:
+    description: "SSH user to connect to the remote server"
+    required: false
+    default: "root"
+  tofu-version:
+    description: "The version of OpenTofu to use"
+    required: false
+    default: "1.11.6"
+  working-directory:
+    description: "The directory containing your infrastructure configuration files"
+    required: false
+    default: ".infra"
+runs:
+  using: "composite"
+  steps:
+    - name: Setup SSH key
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ inputs.ssh-key }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -p ${{ inputs.ssh-port }} ${{ inputs.ssh-host }} >> ~/.ssh/known_hosts 2>/dev/null
+
+    - name: Setup OpenTofu
+      uses: opentofu/setup-opentofu@v2
+      with:
+        tofu_version: ${{ inputs.tofu-version }}
+
+    - name: Init OpenTofu
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: tofu init
+
+    - name: Apply infrastructure changes
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        TF_VAR_remote_host: ${{ inputs.ssh-host }}
+        TF_VAR_remote_port: ${{ inputs.ssh-port }}
+        TF_VAR_remote_user: ${{ inputs.ssh-user }}
+      run: tofu apply -input=false -auto-approve
