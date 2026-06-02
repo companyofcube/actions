@@ -30,17 +30,26 @@ runs:
   steps:
     - name: 🖌 Git Commit
       shell: bash
+      env:
+        COMMIT_MESSAGE: ${{ inputs.message }}
       run: |
         git config user.name gitea-actions
         git config user.email teabot@gitea.io
-        git commit -m "${{ inputs.message }} [skip ci]"
+        git commit -m "$COMMIT_MESSAGE [skip ci]"
 
     - name: 🚀 Git Push
       shell: bash
+      env:
+        SSH_PRIVATE_KEY: ${{ inputs.ssh-key }}
+        SSH_HOST: ${{ inputs.ssh-host }}
+        SSH_PORT: ${{ inputs.ssh-port }}
+        SSH_USER: ${{ inputs.ssh-user }}
+        REPOSITORY: ${{ inputs.repository }}
+        BRANCH: ${{ inputs.branch }}
       run: |
         mkdir -p ~/.ssh
-        echo "${{ inputs.ssh-key }}" > ~/.ssh/id_rsa
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -p ${{ inputs.ssh-port }} ${{ inputs.ssh-host }} >> ~/.ssh/known_hosts 2>/dev/null
-        git remote set-url origin ssh://${{ inputs.ssh-user }}@${{ inputs.ssh-host }}:${{ inputs.ssh-port }}/${{ inputs.repository }}.git
-        git push origin HEAD:refs/heads/${{ inputs.branch }}
+        ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+        git remote set-url origin "ssh://$SSH_USER@$SSH_HOST:$SSH_PORT/$REPOSITORY.git"
+        git push origin "HEAD:refs/heads/$BRANCH"
