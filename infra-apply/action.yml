@@ -28,11 +28,15 @@ runs:
   steps:
     - name: Setup SSH key
       shell: bash
+      env:
+        SSH_PRIVATE_KEY: ${{ inputs.ssh-key }}
+        SSH_PORT: ${{ inputs.ssh-port }}
+        SSH_HOST: ${{ inputs.ssh-host }}
       run: |
         mkdir -p ~/.ssh
-        echo "${{ inputs.ssh-key }}" > ~/.ssh/id_rsa
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -p ${{ inputs.ssh-port }} ${{ inputs.ssh-host }} >> ~/.ssh/known_hosts 2>/dev/null
+        ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
     - name: Setup OpenTofu
       uses: opentofu/setup-opentofu@v2
