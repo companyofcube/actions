@@ -33,33 +33,50 @@ runs:
   using: "composite"
   steps:
     - name: Configure Git
+      shell: bash
       run: |
         git config user.name gitea-actions
         git config user.email teabot@gitea.io
 
     - name: Attempt to merge ${{ inputs.source-branch }} into ${{ inputs.target-branch }}
       id: merge
+      shell: bash
+      env:
+        SOURCE_BRANCH: ${{ inputs.source-branch }}
+        TARGET_BRANCH: ${{ inputs.target-branch }}
       run: |
-        git fetch origin ${{ inputs.target-branch }}
-        git checkout ${{ inputs.target-branch }}
-        git merge origin/${{ inputs.source-branch }} --ff -m "Auto-merge ${{ inputs.source-branch }} into ${{ inputs.target-branch }}" || echo "CONFLICT=true" >> $GITHUB_OUTPUT
+        git fetch origin "$TARGET_BRANCH"
+        git checkout "$TARGET_BRANCH"
+        git merge "origin/$SOURCE_BRANCH" --ff -m "Auto-merge $SOURCE_BRANCH into $TARGET_BRANCH" \
+          || echo "CONFLICT=true" >> $GITHUB_OUTPUT
 
     - name: Push if no conflicts
       if: steps.merge.outputs.CONFLICT != 'true'
       shell: bash
+      env:
+        SSH_PRIVATE_KEY: ${{ inputs.ssh-key }}
+        SSH_HOST: ${{ inputs.ssh-host }}
+        SSH_PORT: ${{ inputs.ssh-port }}
+        SSH_USER: ${{ inputs.ssh-user }}
+        REPOSITORY: ${{ inputs.repository }}
+        TARGET_BRANCH: ${{ inputs.target-branch }}
       run: |
         mkdir -p ~/.ssh
-        echo "${{ inputs.ssh-key }}" > ~/.ssh/id_rsa
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -p ${{ inputs.ssh-port }} ${{ inputs.ssh-host }} >> ~/.ssh/known_hosts 2>/dev/null
-        git remote set-url origin ssh://${{ inputs.ssh-user }}@${{ inputs.ssh-host }}:${{ inputs.ssh-port }}/${{ inputs.repository }}.git
-        git push origin HEAD:refs/heads/${{ inputs.target-branch }}
+        ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+        git remote set-url origin "ssh://$SSH_USER@$SSH_HOST:$SSH_PORT/$REPOSITORY.git"
+        git push origin "HEAD:refs/heads/$TARGET_BRANCH"
 
     - name: Notify about conflicts
       if: steps.merge.outputs.CONFLICT == 'true'
+      shell: bash
+      env:
+        SOURCE_BRANCH: ${{ inputs.source-branch }}
+        TARGET_BRANCH: ${{ inputs.target-branch }}
       run: |
         git merge --abort
-        echo "::warning::⚠️ Merge conflict detected! Cannot automatically merge ${{ inputs.source-branch }} into ${{ inputs.target-branch }}. Please resolve conflicts manually."
+        echo "::warning::⚠️ Merge conflict detected! Cannot automatically merge $SOURCE_BRANCH into $TARGET_BRANCH. Please resolve conflicts manually."
         exit 1
 
     - name: 📩🔥 Send Discord notification about conflicts
