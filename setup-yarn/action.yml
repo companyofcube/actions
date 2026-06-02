@@ -11,10 +11,11 @@ runs:
   using: "composite"
   steps:
     - name: ⚙ Enable Corepack
+      shell: bash
       run: corepack enable
 
     - name: ⚙ Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
         cache: yarn
@@ -22,7 +23,9 @@ runs:
     - name: 🔑 Authenticate with registry
       if: ${{ inputs.registry-token != '' }}
       shell: bash
-      run: yarn config set npmScopes.companyofcube.npmAuthToken ${{ inputs.registry-token }}
+      env:
+        REGISTRY_TOKEN: ${{ inputs.registry-token }}
+      run: yarn config set npmScopes.companyofcube.npmAuthToken "$REGISTRY_TOKEN"
 
     - name: 📦 Install dependencies
       shell: bash
