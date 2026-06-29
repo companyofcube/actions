@@ -1,6 +1,10 @@
 name: "Apply infrastructure Changes"
 description: "Apply infrastructure changes on a remote server through SSH"
 inputs:
+  environment:
+    description: "Deployment environment (dev/prod). Leave empty for projects without environment-specific backends."
+    required: false
+    default: ""
   ssh-host:
     description: "SSH host of the remote server"
     required: true
@@ -46,12 +50,15 @@ runs:
     - name: Init OpenTofu
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: tofu init
+      env:
+        BACKEND_CONFIG: ${{ inputs.environment != '' && format('-backend-config=backend-{0}.hcl', inputs.environment) || '' }}
+      run: tofu init $BACKEND_CONFIG
 
     - name: Apply infrastructure changes
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
+        TF_VAR_environment: ${{ inputs.environment }}
         TF_VAR_remote_host: ${{ inputs.ssh-host }}
         TF_VAR_remote_port: ${{ inputs.ssh-port }}
         TF_VAR_remote_user: ${{ inputs.ssh-user }}
