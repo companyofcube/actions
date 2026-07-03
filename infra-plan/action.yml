@@ -42,5 +42,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
-        TF_VAR_environment: ${{ inputs.environment }}
-      run: tofu plan -input=false
+        INPUT_ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        [ -n "$INPUT_ENVIRONMENT" ] && export TF_VAR_environment="$INPUT_ENVIRONMENT"
+        tofu plan -input=false
